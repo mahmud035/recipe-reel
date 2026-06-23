@@ -1,0 +1,27 @@
+{
+  "name": "recipe-reel-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file=.env src/server.ts",
+    "build": "tsc && mkdir -p dist/modules/recipe/pdf/fonts && cp src/modules/recipe/pdf/fonts/NotoSansBengali.ttf dist/modules/recipe/pdf/fonts/NotoSansBengali.ttf",
+    "start": "node --env-file=.env dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "extract": "node --env-file=.env scripts/run-extraction.ts"
+  },
+  "dependencies": {
+    "@google/genai": "2.9.0",
+    "cors": "2.8.6",
+    "express": "5.2.1",
+    "mongoose": "9.7.2",
+    "puppeteer": "25.2.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "typescript": "6.0.3"
+  }
+}

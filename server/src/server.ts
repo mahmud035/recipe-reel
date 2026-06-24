@@ -10,8 +10,9 @@ async function bootstrap(): Promise<void> {
 
   await recipeService.sweepOrphanedJobs();
 
-  app.listen(config.PORT, () => {
-    console.log(`Server listening on http://localhost:${config.PORT}`);
+  // Bind 0.0.0.0 explicitly so the container is reachable from Traefik (not just loopback).
+  app.listen(config.PORT, "0.0.0.0", () => {
+    console.log(`Server listening on http://0.0.0.0:${config.PORT}`);
   });
 }
 

@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       // Dev: forward API calls to the Express server.
-      "/api": "http://localhost:4000",
+      "/api": "http://localhost:5000",
     },
   },
 });

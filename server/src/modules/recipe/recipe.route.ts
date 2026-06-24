@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { validateRequest } from "../../middleware/validate-request.ts";
+import { jobsRateLimiter } from "../../middleware/rate-limit.ts";
 import { recipeController } from "./recipe.controller.ts";
 import {
   buildPdfSchema,
@@ -15,8 +16,11 @@ import {
  */
 export const recipeRouter = Router();
 
+// jobsRateLimiter runs first so an over-limit caller is rejected before any validation or DB
+// work. Scoped here, never globally — GET /jobs polling and /health must stay unthrottled.
 recipeRouter.post(
   "/jobs",
+  jobsRateLimiter,
   validateRequest(createJobSchema),
   recipeController.createJob,
 );

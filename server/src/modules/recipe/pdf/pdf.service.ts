@@ -22,16 +22,41 @@ function getFontBase64(): string {
 }
 
 /**
+ * Single-render mutex. Only one Puppeteer render runs at a time; concurrent requests
+ * queue behind the previous one. On this memory-tight box two Chrome instances at once
+ * would risk an OOM, so serialization is mandatory, not best-effort. The chain swallows
+ * each render's rejection so one failed PDF cannot wedge the queue for the next caller.
+ */
+let renderChain: Promise<unknown> = Promise.resolve();
+
+/**
  * Renders a recipe to a PDF buffer via headless Chrome. Generate-and-stream: the
  * buffer is returned to the controller and sent on the response — nothing is stored.
- * The browser is launched per request and always closed.
+ * Renders are serialized through the mutex above.
  */
 export async function generateRecipePdf(recipe: Recipe): Promise<Buffer> {
+  const run = renderChain.then(() => renderPdf(recipe));
+  renderChain = run.catch(() => undefined);
+  return run;
+}
+
+/**
+ * The actual render. The browser is launched per request and always closed in `finally`.
+ */
+async function renderPdf(recipe: Recipe): Promise<Buffer> {
   const html = renderRecipeHtml(recipe, getFontBase64());
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    // --disable-dev-shm-usage: /dev/shm is tiny in containers; force Chrome to use /tmp
+    // or it crashes mid-render. --disable-gpu: no GPU on the box. --no-sandbox: Coolify
+    // won't grant SYS_ADMIN, so the sandbox can't initialize.
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
   });
   try {
     const page = await browser.newPage();

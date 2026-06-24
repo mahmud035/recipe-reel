@@ -32,10 +32,17 @@ function isTransient(err: unknown): boolean {
 export class GeminiExtractor implements RecipeExtractor {
   private ai: GoogleGenAI;
   private model: string;
+  private onCall?: () => Promise<void> | void;
 
-  constructor(apiKey: string, model: string) {
+  /**
+   * @param onCall optional hook invoked once per real Gemini API response — the budget
+   *   counter's increment point. Injected (not imported) to keep this extractor decoupled
+   *   from the persistence layer.
+   */
+  constructor(apiKey: string, model: string, onCall?: () => Promise<void> | void) {
     this.ai = new GoogleGenAI({ apiKey });
     this.model = model;
+    this.onCall = onCall;
   }
 
   /**
@@ -61,6 +68,13 @@ export class GeminiExtractor implements RecipeExtractor {
           config: config as never,
           contents: contents as never,
         });
+        // Count this real API call against the daily budget. Best-effort: a counter write
+        // failure is logged but never aborts the extraction.
+        try {
+          await this.onCall?.();
+        } catch (recordErr) {
+          console.error(`    [${label}] budget record failed:`, recordErr);
+        }
         const text = res.text;
         if (!text || !text.trim()) throw new Error("empty response from model");
         return text;

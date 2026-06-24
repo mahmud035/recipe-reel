@@ -1,0 +1,94 @@
+name: Deploy server
+
+# Server-only pipeline. Path-filtered to server/** so client-only pushes (Vercel's job)
+# never rebuild this image. The box never builds — Actions builds, GHCR stores, Coolify pulls.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/deploy-server.yml"
+  workflow_dispatch:
+
+# Never let two deploys race; don't cancel one already mid-flight.
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+env:
+  # Hardcoded, never ${{ github.repository }} — this repo is recipe-reel but the image is
+  # recipe-reel-server (server-only artifact).
+  IMAGE_NAME: ghcr.io/mahmud035/recipe-reel-server
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    # Exposed at job scope (not step) so the optional deploy/notify steps can gate on
+    # presence with `if: env.X != ''` — secrets aren't referenceable in `if` directly.
+    env:
+      COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: server
+          file: server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Auto-redeploy fires only once the Coolify resource exists and its webhook secret is set
+      # (first deploy is created manually in the UI). Fail loud on a non-2xx or an error body so
+      # a broken deploy can't pass silently.
+      - name: Trigger Coolify redeploy
+        if: ${{ env.COOLIFY_WEBHOOK != '' }}
+        run: |
+          code=$(curl -sS -o /tmp/deploy.out -w "%{http_code}" \
+            -X GET "$COOLIFY_WEBHOOK" \
+            -H "Authorization: Bearer $COOLIFY_API_TOKEN")
+          echo "Coolify deploy HTTP $code"
+          cat /tmp/deploy.out
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::Coolify deploy returned HTTP $code"
+            exit 1
+          fi
+          if grep -qi '"error"' /tmp/deploy.out; then
+            echo "::error::Coolify deploy body reported an error"
+            exit 1
+          fi
+
+      - name: Notify Discord
+        if: ${{ always() && env.DISCORD_WEBHOOK != '' }}
+        run: |
+          curl -sS -X POST "$DISCORD_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\":\"recipe-reel-server: build+deploy ${{ job.status }} (${GITHUB_SHA:0:7})\"}"

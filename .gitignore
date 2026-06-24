@@ -5,9 +5,35 @@ spike/results.json
 spike/videos.json
 *.log
 .DS_Store
+
+# Env — catch variants, not just the bare name
+.env.*
+!.env.example
+client/.env.*
+server/.env.*
+!client/.env.example
+!server/.env.example
+
+# Build / coverage / cache
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+
 client/node_modules/
 server/node_modules/
 spike/node_modules/
+
 client/dist/
 server/dist/
 spike/dist/
+
+client/.env
+server/.env
+spike/.env

@@ -5,16 +5,19 @@ import { AppError } from "../../utils/app-error.ts";
 import { JobModel } from "./recipe.model.ts";
 import { GeminiExtractor } from "./extractors/gemini-extractor.ts";
 import { generateRecipePdf } from "./pdf/pdf.service.ts";
+import { assertDailyBudget, recordGeminiCall } from "./budget.service.ts";
 import type { RecipeExtractor } from "./extractors/recipe-extractor.interface.ts";
 import type { JobStatus, Recipe } from "./recipe.interface.ts";
 
 /** Hard wall-clock ceiling per job — a hung Gemini call flips the job to error. */
 const JOB_TIMEOUT_MS = 3 * 60 * 1000;
 
-/** The only extractor implementation in v1, behind the adapter seam. */
+/** The only extractor implementation in v1, behind the adapter seam. Each real Gemini call
+ * increments the persisted daily budget counter via the injected hook. */
 const extractor: RecipeExtractor = new GeminiExtractor(
   config.GEMINI_API_KEY,
   config.GEMINI_MODEL,
+  recordGeminiCall,
 );
 
 /** Status values that mean a job is still in flight. */
@@ -105,8 +108,13 @@ async function runJob(jobId: string, youtubeUrl: string): Promise<void> {
  *
  * @param youtubeUrl validated public YouTube URL
  * @returns the new job id to be polled
+ * @throws AppError 429 if today's Gemini budget is exhausted (checked before any spend)
  */
 async function createJob(youtubeUrl: string): Promise<string> {
+  // Quota defense: refuse before creating a job (and before any Gemini call) if the
+  // projected spend would exceed today's ceiling.
+  await assertDailyBudget();
+
   const job = await JobModel.create({ youtubeUrl, status: "pending" });
   const jobId = String(job._id);
 

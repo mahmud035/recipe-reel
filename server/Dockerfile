@@ -23,6 +23,15 @@ ENV NODE_ENV=production \
     PUPPETEER_SKIP_DOWNLOAD=true
 WORKDIR /home/pptruser/app
 
+# tini as PID 1 reaps zombie Chrome processes from hard render crashes (browser.close() in a
+# finally block can't catch those). The base image runs as non-root pptruser, so switch to root
+# for apt then back. Coolify v4.1.2 and Render expose no init toggle — this covers both targets.
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tini \
+    && rm -rf /var/lib/apt/lists/*
+USER pptruser
+
 # Install production deps only. PUPPETEER_SKIP_DOWNLOAD keeps npm from re-downloading the
 # browser — the image already has the matching Chrome 25.2.0 build cached in PUPPETEER_CACHE_DIR.
 COPY --chown=pptruser:pptruser package.json package-lock.json ./
@@ -37,4 +46,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:5000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "dist/server.js"]

@@ -12,18 +12,21 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 export function LoadingState({ status }: { status?: JobStatus }) {
   const label = status ? STATUS_LABEL[status] : STATUS_LABEL.pending;
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <p className="mb-4 text-center text-sm font-medium text-gray-600">{label}</p>
+    <div className="rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-border">
+      <p className="mb-5 text-center text-sm font-medium text-muted">{label}</p>
       <div className="space-y-3" aria-hidden>
-        <div className="h-6 w-2/3 animate-pulse rounded bg-gray-200" />
-        <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200" />
-        <div className="mt-4 space-y-2">
+        <div className="h-7 w-2/3 animate-pulse rounded-lg bg-border" />
+        <div className="h-4 w-1/3 animate-pulse rounded-lg bg-border" />
+        <div className="mt-5 space-y-2.5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-4 w-full animate-pulse rounded bg-gray-100" />
+            <div
+              key={i}
+              className="h-4 w-full animate-pulse rounded-lg bg-border/60"
+            />
           ))}
         </div>
       </div>
-      <p className="mt-4 text-center text-xs text-gray-400">
+      <p className="mt-5 text-center text-xs text-subtle">
         একটু সময় লাগতে পারে, পেজ খোলা রাখুন।
       </p>
     </div>
@@ -39,12 +42,12 @@ export function ErrorState({
   onRetry: () => void;
 }) {
   return (
-    <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-      <p className="text-base font-medium text-red-600">{message}</p>
+    <div className="rounded-2xl bg-surface p-6 text-center shadow-sm ring-1 ring-border">
+      <p className="text-base font-medium text-error">{message}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-4 rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
+        className="mt-5 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white transition hover:bg-primary-hover"
       >
         আবার চেষ্টা করুন
       </button>

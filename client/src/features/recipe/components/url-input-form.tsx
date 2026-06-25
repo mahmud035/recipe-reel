@@ -1,6 +1,9 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { urlFormSchema, type UrlFormValues } from "../validation/recipe.schema.ts";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import {
+  urlFormSchema,
+  type UrlFormValues,
+} from '../validation/recipe.schema.ts';
 
 interface UrlInputFormProps {
   onSubmit: (youtubeUrl: string) => void;
@@ -19,18 +22,18 @@ export function UrlInputForm({
     formState: { errors },
   } = useForm<UrlFormValues>({
     resolver: zodResolver(urlFormSchema),
-    defaultValues: { youtubeUrl: "" },
+    defaultValues: { youtubeUrl: '' },
   });
 
   return (
     <form
       onSubmit={handleSubmit((v) => onSubmit(v.youtubeUrl.trim()))}
-      className="rounded-2xl bg-white p-5 shadow-sm"
+      className="rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-border"
       noValidate
     >
       <label
         htmlFor="youtubeUrl"
-        className="mb-2 block text-sm font-medium text-gray-700"
+        className="mb-2 block text-sm font-medium text-foreground"
       >
         ইউটিউব রেসিপির লিংক
       </label>
@@ -40,20 +43,23 @@ export function UrlInputForm({
         inputMode="url"
         dir="ltr"
         placeholder="https://www.youtube.com/watch?v=…"
-        className="w-full rounded-lg border border-gray-300 px-3 py-3 text-base outline-none focus:border-gray-900"
-        {...register("youtubeUrl")}
+        className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-base text-foreground outline-none transition placeholder:text-subtle focus:border-accent focus:ring-2 focus:ring-accent/30"
+        {...register('youtubeUrl')}
       />
       {errors.youtubeUrl && (
-        <p className="mt-2 text-sm text-red-600">{errors.youtubeUrl.message}</p>
+        <p className="mt-2 text-sm text-error">{errors.youtubeUrl.message}</p>
       )}
-      {serverError && <p className="mt-2 text-sm text-red-600">{serverError}</p>}
+      {serverError && <p className="mt-2 text-sm text-error">{serverError}</p>}
       <button
         type="submit"
         disabled={isSubmitting}
-        className="mt-4 w-full rounded-lg bg-gray-900 px-5 py-3 text-base font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+        className="mt-5 w-full rounded-xl bg-primary px-5 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-primary-hover disabled:opacity-60"
       >
-        {isSubmitting ? "পাঠানো হচ্ছে…" : "রেসিপি বানান"}
+        {isSubmitting ? 'পাঠানো হচ্ছে…' : 'রেসিপি বানান'}
       </button>
+      <p className="mt-4 text-center text-xs leading-relaxed text-muted">
+        লিংক দিন → আমি ভিডিও শুনে রেসিপি লিখি → আপনি দেখে নিয়ে পিডিএফ বানান।
+      </p>
     </form>
   );
 }

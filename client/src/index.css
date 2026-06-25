@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+/* Semantic design tokens (Tailwind v4 @theme → utilities like bg-primary, text-muted).
+   Components reference these tokens only — never raw hex. Warm, calm, trustworthy:
+   deep teal-navy primary, faint warm off-white ground, white card surfaces, one muted
+   terracotta accent used sparingly for focus/active. */
+@theme {
+  --font-sans: "Noto Sans Bengali", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: #faf7f2; /* faint warm off-white, not pure white */
+  --color-surface: #ffffff; /* card surfaces */
+  --color-foreground: #1c1917; /* warm near-black body text */
+  --color-muted: #78716c; /* secondary text */
+  --color-subtle: #a8a29e; /* placeholders, em-dash, hints */
+  --color-border: #ece7e0; /* warm hairline borders / skeleton bars */
+
+  --color-primary: #1b4d4a; /* deep teal-navy — wordmark + primary action */
+  --color-primary-hover: #143b39;
+
+  --color-accent: #c2703d; /* muted terracotta — focus/active only, never fill */
+
+  --color-error: #b54a3c; /* calm warm red for error copy */
+}
+
+/* Bengali needs more vertical air than Latin — generous body line-height. */
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    line-height: 1.7;
+  }
+}

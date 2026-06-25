@@ -16,9 +16,13 @@ interface DraftReviewProps {
   errorMessage?: string | null;
 }
 
-const SECTION = "rounded-2xl bg-white p-5 shadow-sm";
+const CARD = "rounded-2xl bg-surface p-5 shadow-sm ring-1 ring-border";
+const FIELD =
+  "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-base text-foreground outline-none transition placeholder:text-subtle focus:border-accent focus:ring-2 focus:ring-accent/30";
 const ADD_BTN =
-  "mt-3 w-full rounded-lg border border-dashed border-gray-300 py-2 text-sm font-medium text-gray-500 hover:border-gray-900 hover:text-gray-900";
+  "mt-4 w-full rounded-xl border border-dashed border-border py-2.5 text-sm font-medium text-muted transition hover:border-accent hover:text-accent";
+const REMOVE_BTN =
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-subtle transition hover:bg-error/10 hover:text-error disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-subtle";
 
 /** The mandatory human review screen — every field is editable before PDF. */
 export function DraftReview({
@@ -43,30 +47,32 @@ export function DraftReview({
 
   return (
     <form onSubmit={handleSubmit(onConfirm)} className="space-y-5" noValidate>
-      <section className={SECTION}>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
+      <section className={CARD}>
+        <label className="mb-1.5 block text-sm font-medium text-muted">
           রেসিপির নাম
         </label>
-        <input
-          {...register("title")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-base font-semibold outline-none focus:border-gray-900"
-        />
+        <input {...register("title")} className={`${FIELD} font-semibold`} />
         {errors.title && (
-          <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>
+          <p className="mt-1.5 text-xs text-error">{errors.title.message}</p>
         )}
-        <label className="mt-4 mb-1 block text-sm font-medium text-gray-700">
+        <label className="mt-4 mb-1.5 block text-sm font-medium text-muted">
           কত জনের জন্য
         </label>
         <input
           {...register("servings")}
           placeholder="যেমন: ৪ জন"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900"
+          className={FIELD}
         />
       </section>
 
-      <section className={SECTION}>
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">উপকরণ</h2>
-        <div className="space-y-2">
+      <section className={CARD}>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-foreground">উপকরণ</h2>
+          <span className="text-xs text-subtle">
+            {ingredients.fields.length} টি
+          </span>
+        </div>
+        <div className="space-y-2.5">
           {ingredients.fields.map((field, index) => (
             <IngredientRow
               key={field.id}
@@ -87,25 +93,28 @@ export function DraftReview({
         </button>
       </section>
 
-      <section className={SECTION}>
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">প্রণালী</h2>
-        <div className="space-y-2">
+      <section className={CARD}>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-foreground">প্রণালী</h2>
+          <span className="text-xs text-subtle">{steps.fields.length} ধাপ</span>
+        </div>
+        <div className="space-y-2.5">
           {steps.fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2">
-              <span className="pt-2 text-sm font-medium text-gray-400">
-                {index + 1}.
+            <div key={field.id} className="flex items-start gap-2.5">
+              <span className="mt-1.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                {index + 1}
               </span>
               <textarea
                 {...register(`steps.${index}.value`)}
                 rows={2}
-                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900"
+                className={`${FIELD} min-w-0 flex-1 resize-none leading-relaxed`}
               />
               <button
                 type="button"
                 onClick={() => steps.remove(index)}
                 disabled={steps.fields.length <= 1}
                 aria-label="ধাপ মুছুন"
-                className="shrink-0 rounded-lg px-2 text-gray-400 hover:text-red-600 disabled:opacity-30"
+                className={REMOVE_BTN}
               >
                 ✕
               </button>
@@ -122,22 +131,22 @@ export function DraftReview({
       </section>
 
       {errorMessage && (
-        <p className="text-center text-sm text-red-600">{errorMessage}</p>
+        <p className="text-center text-sm text-error">{errorMessage}</p>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onReset}
           disabled={isSubmitting}
-          className="flex-1 rounded-lg border border-gray-300 px-5 py-3 text-base font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-60"
+          className="flex-1 rounded-xl border border-border px-5 py-3 text-base font-medium text-muted transition hover:bg-background hover:text-foreground disabled:opacity-60"
         >
           নতুন লিংক
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 rounded-lg bg-gray-900 px-5 py-3 text-base font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+          className="flex-1 rounded-xl bg-primary px-5 py-3.5 text-base font-semibold text-white shadow-sm transition hover:bg-primary-hover disabled:opacity-60"
         >
           {isSubmitting ? "তৈরি হচ্ছে…" : "পিডিএফ বানান"}
         </button>

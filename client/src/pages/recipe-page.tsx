@@ -17,6 +17,7 @@ import {
 } from "../features/recipe/validation/recipe.schema.ts";
 import { getApiErrorMessage } from "../api/axios.ts";
 import { downloadBlob } from "../utils/download-blob.ts";
+import { APP_NAME, APP_TAGLINE } from "../constants/app.ts";
 
 const CEILING_MS = 5 * 60 * 1000;
 
@@ -107,13 +108,11 @@ export function RecipePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="mx-auto w-full max-w-xl">
-        <header className="mb-6 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">রান্না</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            ইউটিউব রেসিপি থেকে বাংলা রেসিপি
-          </p>
+    <main className="min-h-screen bg-background px-4 py-10 sm:py-14">
+      <div className="mx-auto w-full max-w-md">
+        <header className="mb-8 text-center sm:mb-10">
+          <h1 className="text-4xl font-bold text-primary">{APP_NAME}</h1>
+          <p className="mt-2 text-base text-muted">{APP_TAGLINE}</p>
         </header>
         {content}
       </div>

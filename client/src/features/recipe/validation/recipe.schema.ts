@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Recipe } from "../types/recipe.types.ts";
+import { formatQuantity } from "../../../utils/format-quantity.ts";
 
 /** Mirrors the server's YouTube URL rule so bad links are caught before submit. */
 const YOUTUBE_URL =
@@ -41,9 +42,12 @@ export function toDraftValues(recipe: Recipe): DraftValues {
   return {
     title: recipe.title,
     servings: recipe.servings ?? "",
+    // Normalize the quantity at the form seed so the human reviews "৪ টি" (and can veto
+    // it) instead of "৪টে". Cosmetic only — the raw extraction in Mongo is untouched, and
+    // fromDraftValues passes whatever the user leaves through unchanged.
     ingredients: recipe.ingredients.map((i) => ({
       name: i.name,
-      quantity: i.quantity ?? "",
+      quantity: formatQuantity(i.quantity ?? ""),
     })),
     steps: recipe.steps.map((s) => ({ value: s })),
   };

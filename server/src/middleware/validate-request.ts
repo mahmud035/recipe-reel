@@ -20,6 +20,11 @@ export function validateRequest(schema: ZodType): RequestHandler {
       next(new AppError(400, message));
       return;
     }
+    // Propagate the parsed/transformed body (e.g. the canonicalized YouTube URL) to the
+    // controller. Only `body` — Express 5's req.query is a read-only getter; req.params is
+    // untouched. Schemas without a `body` key (getJob) leave req.body as-is.
+    const data = result.data as { body?: unknown };
+    if (data.body !== undefined) req.body = data.body;
     next();
   };
 }

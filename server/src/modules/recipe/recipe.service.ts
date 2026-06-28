@@ -1,13 +1,13 @@
-import mongoose from "mongoose";
-import { ZodError } from "zod";
-import { config } from "../../config/index.ts";
-import { AppError } from "../../utils/app-error.ts";
-import { JobModel } from "./recipe.model.ts";
-import { GeminiExtractor } from "./extractors/gemini-extractor.ts";
-import { generateRecipePdf } from "./pdf/pdf.service.ts";
-import { assertDailyBudget, recordGeminiCall } from "./budget.service.ts";
-import type { RecipeExtractor } from "./extractors/recipe-extractor.interface.ts";
-import type { JobStatus, Recipe } from "./recipe.interface.ts";
+import mongoose from 'mongoose';
+import { ZodError } from 'zod';
+import { config } from '../../config/index.ts';
+import { AppError } from '../../utils/app-error.ts';
+import { assertDailyBudget, recordGeminiCall } from './budget.service.ts';
+import { GeminiExtractor } from './extractors/gemini-extractor.ts';
+import type { RecipeExtractor } from './extractors/recipe-extractor.interface.ts';
+import { generateRecipePdf } from './pdf/pdf.service.ts';
+import type { JobStatus, Recipe } from './recipe.interface.ts';
+import { JobModel } from './recipe.model.ts';
 
 /** Hard wall-clock ceiling per job — a hung Gemini call flips the job to error. */
 const JOB_TIMEOUT_MS = 3 * 60 * 1000;
@@ -21,7 +21,7 @@ const extractor: RecipeExtractor = new GeminiExtractor(
 );
 
 /** Status values that mean a job is still in flight. */
-const IN_FLIGHT: JobStatus[] = ["pending", "transcribing", "extracting"];
+const IN_FLIGHT: JobStatus[] = ['pending', 'transcribing', 'extracting'];
 
 class TimeoutError extends Error {}
 
@@ -29,7 +29,7 @@ class TimeoutError extends Error {}
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(
-      () => reject(new TimeoutError("job exceeded time limit")),
+      () => reject(new TimeoutError('job exceeded time limit')),
       ms,
     );
     promise.then(
@@ -48,16 +48,21 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 /** Maps an internal error to a safe, user-facing message (full error is logged). */
 function toUserMessage(err: unknown): string {
   if (err instanceof TimeoutError) {
-    return "Extraction took too long and was stopped. Please try again.";
+    return 'Extraction took too long and was stopped. Please try again.';
   }
   if (err instanceof ZodError) {
-    return "A recipe could not be read reliably from this video.";
+    return 'A recipe could not be read reliably from this video.';
   }
   const text = err instanceof Error ? err.message : String(err);
   if (/429|RESOURCE_EXHAUSTED|quota|rate.?limit/i.test(text)) {
-    return "The free daily quota is exhausted. Please try again later.";
+    return 'The free daily quota is exhausted. Please try again later.';
   }
-  return "Could not extract a recipe from this video.";
+  // Reaches here only for genuinely unfetchable videos — Layer 1 already strips playlist
+  // params, so this is no longer a playlist case; keep the message about access only.
+  if (/Unsupported MIME type|INVALID_ARGUMENT|invalid argument/i.test(text)) {
+    return "This video couldn't be read. It may be private, removed, or too long to process.";
+  }
+  return 'Could not extract a recipe from this video.';
 }
 
 /**
@@ -66,24 +71,24 @@ function toUserMessage(err: unknown): string {
  */
 async function failJob(jobId: string, message: string): Promise<void> {
   await JobModel.findOneAndUpdate(
-    { _id: jobId, status: { $ne: "ready" } },
-    { status: "error", error: message },
+    { _id: jobId, status: { $ne: 'ready' } },
+    { status: 'error', error: message },
   );
 }
 
 /** The actual transcribe → extract pipeline. Each write advances the polled status. */
 async function processJob(jobId: string, youtubeUrl: string): Promise<void> {
-  await JobModel.findByIdAndUpdate(jobId, { status: "transcribing" });
+  await JobModel.findByIdAndUpdate(jobId, { status: 'transcribing' });
   const transcript = await extractor.transcribe(youtubeUrl);
 
-  await JobModel.findByIdAndUpdate(jobId, { status: "extracting" });
+  await JobModel.findByIdAndUpdate(jobId, { status: 'extracting' });
   const recipe: Recipe = await extractor.extractFromText(transcript);
 
   // Only complete a job that is still extracting; if a timeout already failed it,
   // this no-ops and the late result is discarded.
   await JobModel.findOneAndUpdate(
-    { _id: jobId, status: "extracting" },
-    { status: "ready", recipe, error: null },
+    { _id: jobId, status: 'extracting' },
+    { status: 'ready', recipe, error: null },
   );
 }
 
@@ -115,7 +120,7 @@ async function createJob(youtubeUrl: string): Promise<string> {
   // projected spend would exceed today's ceiling.
   await assertDailyBudget();
 
-  const job = await JobModel.create({ youtubeUrl, status: "pending" });
+  const job = await JobModel.create({ youtubeUrl, status: 'pending' });
   const jobId = String(job._id);
 
   void runJob(jobId, youtubeUrl).catch((err: unknown) => {
@@ -135,11 +140,11 @@ async function getJob(
   jobId: string,
 ): Promise<{ status: JobStatus; recipe: Recipe | null; error: string | null }> {
   if (!mongoose.isValidObjectId(jobId)) {
-    throw new AppError(404, "Job not found");
+    throw new AppError(404, 'Job not found');
   }
   const job = await JobModel.findById(jobId).lean();
   if (!job) {
-    throw new AppError(404, "Job not found");
+    throw new AppError(404, 'Job not found');
   }
   return { status: job.status, recipe: job.recipe, error: job.error };
 }
@@ -151,7 +156,10 @@ async function getJob(
 async function sweepOrphanedJobs(): Promise<void> {
   const result = await JobModel.updateMany(
     { status: { $in: IN_FLIGHT } },
-    { status: "error", error: "The server restarted while this job was processing." },
+    {
+      status: 'error',
+      error: 'The server restarted while this job was processing.',
+    },
   );
   if (result.modifiedCount > 0) {
     console.log(`Swept ${result.modifiedCount} orphaned job(s) to error.`);

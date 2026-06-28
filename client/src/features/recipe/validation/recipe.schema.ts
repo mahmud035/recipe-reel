@@ -1,17 +1,15 @@
 import { z } from "zod";
 import type { Recipe } from "../types/recipe.types.ts";
 import { formatQuantity } from "../../../utils/format-quantity.ts";
-
-/** Mirrors the server's YouTube URL rule so bad links are caught before submit. */
-const YOUTUBE_URL =
-  /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]{11}(?:[?&#].*)?$/i;
+import { canonicalizeYoutubeUrl } from "../../../utils/canonicalize-youtube-url.ts";
 
 export const urlFormSchema = z.object({
   youtubeUrl: z
     .string()
     .trim()
     .min(1, "ইউটিউব লিংক দিন।")
-    .regex(YOUTUBE_URL, "সঠিক ইউটিউব ভিডিও লিংক দিন।"),
+    // One validation source: a link that canonicalizes to null is not a real video link.
+    .refine((v) => canonicalizeYoutubeUrl(v) !== null, "সঠিক ইউটিউব ভিডিও লিংক দিন।"),
 });
 export type UrlFormValues = z.infer<typeof urlFormSchema>;
 

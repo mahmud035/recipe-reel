@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canonicalizeYoutubeUrl } from "./canonicalize-youtube-url.ts";
 
 /**
  * THE contract. The Recipe schema is the single source of truth: the Gemini
@@ -31,6 +32,10 @@ export const recipeSchema = z.object({
 const YOUTUBE_URL =
   /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)[\w-]{11}(?:[?&#].*)?$/i;
 
+/** Single source of truth for the invalid-link message (regex gate + canonical reject). */
+const INVALID_YOUTUBE_URL_MESSAGE =
+  "Please paste a public YouTube video link (youtube.com/watch?v=… or youtu.be/…).";
+
 /** Request body for POST /api/recipe/jobs. */
 export const createJobSchema = z.object({
   body: z.object({
@@ -38,10 +43,18 @@ export const createJobSchema = z.object({
       .string()
       .trim()
       .min(1, "A YouTube link is required.")
-      .regex(
-        YOUTUBE_URL,
-        "Please paste a public YouTube video link (youtube.com/watch?v=… or youtu.be/…).",
-      ),
+      .regex(YOUTUBE_URL, INVALID_YOUTUBE_URL_MESSAGE)
+      // Cheap regex gate first; then strip playlist/tracking params to a canonical watch
+      // URL — this transformed value is what flows to createJob() and Gemini. A shape that
+      // canonicalizes to null (no real video id) is rejected with the same message.
+      .transform((value, ctx) => {
+        const canonical = canonicalizeYoutubeUrl(value);
+        if (canonical === null) {
+          ctx.addIssue({ code: "custom", message: INVALID_YOUTUBE_URL_MESSAGE });
+          return z.NEVER;
+        }
+        return canonical;
+      }),
   }),
 });
 

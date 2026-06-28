@@ -4,6 +4,7 @@ import {
   urlFormSchema,
   type UrlFormValues,
 } from '../validation/recipe.schema.ts';
+import { canonicalizeYoutubeUrl } from '../../../utils/canonicalize-youtube-url.ts';
 
 interface UrlInputFormProps {
   onSubmit: (youtubeUrl: string) => void;
@@ -27,7 +28,11 @@ export function UrlInputForm({
 
   return (
     <form
-      onSubmit={handleSubmit((v) => onSubmit(v.youtubeUrl.trim()))}
+      onSubmit={handleSubmit((v) => {
+        // Validation guarantees a canonical form exists; send that, not the raw paste.
+        const canonical = canonicalizeYoutubeUrl(v.youtubeUrl);
+        if (canonical) onSubmit(canonical);
+      })}
       className="rounded-2xl bg-surface p-6 shadow-sm ring-1 ring-border"
       noValidate
     >
